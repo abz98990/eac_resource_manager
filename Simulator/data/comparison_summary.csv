@@ -1,0 +1,4 @@
+scheduler,tasks_generated,tasks_completed,total_energy_kwh,mean_completion_latency_min,mean_queue_wait_min,sla_breach_count,sla_breach_rate,migrated_count,mean_active_nodes
+Round-Robin (Baseline),3198,3184,50.07480456131712,23.911072744493232,8.061602376799044,1022,0.32097989949748745,0,20.0
+Green Heuristic (Rule-Based Constraint Engine),3198,3184,49.94640939152936,28.44511078858441,12.478002045279187,489,0.15358040201005024,13,20.0
+Consolidating Green Heuristic,3198,3184,44.74336567702957,35.659537168096456,19.766127648592718,481,0.1510678391959799,13,15.5

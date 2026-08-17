@@ -1,0 +1,14 @@
+# Python virtual environments
+.venv/
+venv/
+
+# Python bytecode/cache
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+
+# OS
+Thumbs.db
+desktop.ini
