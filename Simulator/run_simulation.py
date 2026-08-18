@@ -57,6 +57,7 @@ def run_scenario(scheduler_factory, name_slug: str, tasks):
 
 
 def main():
+    visualize.plot_power_curve()
     tasks = workload.generate_tasks(duration_min=DURATION_MIN, spike_windows=SPIKE_WINDOWS)
     visualize.plot_workload_arrivals(tasks, duration_min=DURATION_MIN)
     print(f"Generated {len(tasks)} tasks over {DURATION_MIN:.0f} simulated minutes across {NUM_NODES} nodes.\n")
@@ -64,6 +65,7 @@ def main():
     summaries = []
     active_by_scheduler = {}
     for scheduler_factory, slug, _short_label in SCHEDULERS:
+        print(f"Running {scheduler_factory.__name__}...")
         summary, active_df, stats = run_scenario(scheduler_factory, slug, tasks)
         summaries.append(summary)
         active_by_scheduler[summary["scheduler"]] = active_df

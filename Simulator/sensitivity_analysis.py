@@ -11,7 +11,7 @@ from __future__ import annotations
 import pandas as pd
 import simpy
 
-from src import metrics, workload
+from src import metrics, visualize, workload
 from src.datacenter import DataCenter
 from src.schedulers.green_consolidating import ConsolidatingGreenScheduler
 from src.schedulers.green_heuristic import GreenHeuristicScheduler
@@ -72,11 +72,23 @@ def intensity_sweep(multipliers: list[float], num_nodes: int = 20) -> pd.DataFra
     return pd.DataFrame(rows)
 
 
-if __name__ == "__main__":
+def main():
     print("=== Node-count sweep (fixed workload, 3198 tasks) ===")
     node_df = node_count_sweep([14, 17, 20, 25, 30])
     metrics.export_csv(node_df, "sensitivity_node_count.csv")
+    print("Saved:", visualize.plot_sensitivity(
+        node_df, "num_nodes", "Number of Nodes",
+        "Sensitivity to Cluster Size (fixed workload)", "sensitivity_node_count.png",
+    ))
 
     print("\n=== Workload-intensity sweep (fixed 20 nodes) ===")
     intensity_df = intensity_sweep([0.5, 0.75, 1.0, 1.25, 1.5])
     metrics.export_csv(intensity_df, "sensitivity_intensity.csv")
+    print("Saved:", visualize.plot_sensitivity(
+        intensity_df, "intensity_multiplier", "Workload Intensity Multiplier",
+        "Sensitivity to Workload Intensity (fixed 20 nodes)", "sensitivity_intensity.png",
+    ))
+
+
+if __name__ == "__main__":
+    main()

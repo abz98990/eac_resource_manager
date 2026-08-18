@@ -148,33 +148,3 @@ class DataCenter:
         if hasattr(self.scheduler, "rebalance"):
             self.env.process(self._rebalance_loop(rebalance_interval_min))
         self.env.run(until=duration_min)
-
-
-if __name__ == "__main__":
-    import simpy as _simpy
-
-    from . import workload
-    from .schedulers.green_heuristic import GreenHeuristicScheduler
-    from .schedulers.round_robin import RoundRobinScheduler
-
-    DURATION = 1440.0
-    tasks = workload.generate_tasks(duration_min=DURATION, spike_windows=[(600, 660, 6.0), (900, 930, 8.0)])
-
-    for scheduler_cls in (RoundRobinScheduler, GreenHeuristicScheduler):
-        env = _simpy.Environment()
-        scheduler = scheduler_cls(num_nodes=12)
-        dc = DataCenter(env, num_nodes=12, scheduler=scheduler)
-        dc.run(tasks, duration_min=DURATION)
-
-        completed = [r for r in dc.task_records if r.end_time > 0]
-        breaches = sum(r.sla_breached for r in completed)
-        migrated = sum(r.migrated for r in completed)
-        avg_wait = sum(r.queue_wait_min for r in completed) / len(completed)
-
-        print(f"\n=== {scheduler.name} ===")
-        print(f"  tasks completed:   {len(completed)} / {len(tasks)}")
-        print(f"  avg queue wait:    {avg_wait:.2f} min")
-        print(f"  SLA breaches:      {breaches} ({100 * breaches / len(completed):.1f}%)")
-        print(f"  tasks migrated:    {migrated}")
-        if hasattr(scheduler, "stats"):
-            print(f"  scheduler stats:   {scheduler.stats}")

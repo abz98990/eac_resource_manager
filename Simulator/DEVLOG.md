@@ -533,3 +533,30 @@ trade-off has a real, characterised failure mode at light load, driven by a spec
 nameable cause (fixed wake-up cost dominating when traffic is sparse) rather than being
 mysterious. That's a stronger, more defensible "Limitations" section than simply not
 testing the edges would have produced.
+
+---
+
+## 2026-08-17 — Refactor for launchability (no behavior changes)
+
+**What:** the project had grown into several standalone scripts you had to remember to run
+in the right order (`run_simulation.py`, then separately `sensitivity_analysis.py`, then
+separately `plot_sensitivity.py`), plus a `.venv` set up ad hoc with no pinned dependency
+list. Refactored purely for ease of setup/launch — **no simulation logic changed**:
+
+- Added `requirements.txt` (pinned versions) so setup is one command.
+- Merged `plot_sensitivity.py` into `sensitivity_analysis.py`'s own `main()` — one command
+  now produces both the sweep CSVs and their figures.
+- `run_simulation.py` now also generates `power_curve.png`, so a single run produces the
+  *complete* evidence set instead of requiring a separate `python -m src.visualize` call.
+- Removed the ad hoc 12-node, 2-scheduler comparison in `datacenter.py`'s `__main__` block —
+  it was an early smoke test from before `run_simulation.py` existed, had drifted out of
+  sync (wrong node count, missing the third scheduler), and risked being mistaken for a
+  current result. `power_model.py` and `workload.py` keep their lightweight `__main__`
+  self-tests since those stayed accurate and are genuinely useful for quick iteration.
+- Added `main.py` as the single command surface: `demo` (narrated, for presenting live),
+  `run`, `sensitivity`, `components`.
+- Added `README.md` with setup instructions and a live-demo script.
+
+**Verification:** re-ran `demo`, `run`, and `sensitivity` end to end post-refactor — all
+numbers reproduce exactly (workload generation is seeded), confirming this was a pure
+restructuring with no change to simulation behavior.
