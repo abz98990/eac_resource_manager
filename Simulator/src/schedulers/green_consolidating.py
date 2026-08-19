@@ -1,17 +1,8 @@
-"""
-Consolidating Green Heuristic — extends the Rule-Based Constraint Engine
-(green_heuristic.py) with a power-down/wake-up mechanism, to test whether
-idle-power savings (not just redline avoidance) are reachable without
-reintroducing the SLA risk that IPR S2.1 criticises in Beloglazov et al.'s
-aggressive VM consolidation.
+"""Constraint engine plus node power-down.
 
-The key design choice: this scheduler NEVER migrates a running task purely
-to consolidate/free up a node. It only powers down a node that has already
-gone completely empty on its own (all its tasks finished naturally), and
-only wakes a fresh node when no already-on node has headroom. Consolidation
-is therefore a strictly zero-disruption, opportunistic side effect of the
-existing placement rules — not a competing objective that could touch a
-running task's SLA.
+Nodes are only powered down once they have emptied on their own — a running
+task is never moved just to free a node, so consolidation can't cause an SLA
+breach the way aggressive VM packing can.
 """
 
 from __future__ import annotations
@@ -25,8 +16,8 @@ from .green_heuristic import (
     PREFERRED_LOW_PCT,
 )
 
-WAKE_UP_MIN = 3.0  # simulated minutes for a powered-down node to become available
-EMPTY_STREAK = 6  # consecutive rebalance ticks a node must sit empty before power-down
+WAKE_UP_MIN = 3.0
+EMPTY_STREAK = 6
 
 
 class ConsolidatingGreenScheduler:
@@ -49,7 +40,6 @@ class ConsolidatingGreenScheduler:
             "nodes_woken": 0,
         }
 
-    # --- initial placement -------------------------------------------------
     def choose_node(self, task, nodes, now: float) -> int:
         demand = task.cpu_demand_pct
         on_nodes = [n for n in nodes if n.powered_on]
@@ -58,8 +48,7 @@ class ConsolidatingGreenScheduler:
         if eligible:
             return self._score_pick(eligible, demand)
 
-        # No powered-on node has headroom: prefer waking fresh capacity over
-        # forcing a redline admission onto an already-hot node.
+        # Waking a spare node beats cooking one that is already at the limit.
         off_nodes = [n for n in nodes if not n.powered_on]
         if off_nodes:
             self.stats["nodes_woken"] += 1
@@ -77,7 +66,6 @@ class ConsolidatingGreenScheduler:
 
         return min(eligible, key=score).node_id
 
-    # --- periodic rebalancing: redline migration + opportunistic power-down --
     def rebalance(self, datacenter, now: float) -> None:
         for node in datacenter.nodes:
             if node.powered_on and node.used_pct > REDLINE_THRESHOLD_PCT:

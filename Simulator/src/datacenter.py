@@ -1,13 +1,8 @@
-"""
-SimPy discrete-event data center environment (IPR S3.1's "SimPy Environment
-Engine"): a fixed number of server nodes, each a 100%-capacity CPU pool,
-executing an incoming task stream placed by a pluggable scheduler. Tracks
-per-node utilization over time and per-task completion/latency/SLA outcomes.
-"""
+"""SimPy data centre: server nodes executing a task stream under a scheduler."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import simpy
 
@@ -28,12 +23,11 @@ class TaskRecord:
 
 
 class Node:
-    """A single server node: a capacity pool of 100 CPU percentage-points."""
+    """A server node holding 100 capacity units, one per CPU percentage point."""
 
-    # SimPy's Container blocks a put() outright if it fails the capacity
-    # check even by a hair; over hundreds of get/put cycles, accumulated
-    # float drift can make a legitimate release fail that check and stall
-    # forever (see DEVLOG 2026-08-17). A tiny slack absorbs that drift.
+    # SimPy refuses a put() that would overshoot capacity by even a float
+    # rounding error, and the task then blocks forever. A hair of slack
+    # absorbs the drift that builds up over thousands of get/put cycles.
     _CAPACITY_EPSILON = 1e-6
 
     def __init__(self, env: simpy.Environment, node_id: int, capacity_pct: float = 100.0):
@@ -43,10 +37,6 @@ class Node:
         self.container = simpy.Container(
             env, capacity=capacity_pct + self._CAPACITY_EPSILON, init=capacity_pct
         )
-        # Power-down/wake-up support (only used by consolidation-aware
-        # schedulers; a node that never sets this False behaves exactly as
-        # before). A powered-off node must never be routed a task directly —
-        # DataCenter._run_task wakes it (with delay) before it can get().
         self.powered_on = True
 
     @property
@@ -62,16 +52,12 @@ class DataCenter:
         self.nodes = [Node(env, i) for i in range(num_nodes)]
         self.running: dict[int, list[TaskRecord]] = {i: [] for i in range(num_nodes)}
         self.task_records: list[TaskRecord] = []
-        # (time, node_id, used_pct, powered_on)
         self.utilization_samples: list[tuple[float, int, float, bool]] = []
-        # A scheduler-supplied cost takes precedence; falls back to the
-        # scheduler's own constant if it doesn't expose one explicitly.
         self.migration_cost_per_pct_min = migration_cost_per_pct_min or getattr(
             scheduler, "migration_cost_per_pct_min", 0.0
         )
         self.wake_up_min = wake_up_min or getattr(scheduler, "wake_up_min", 0.0)
 
-    # --- per-task lifecycle --------------------------------------------------
     def _run_task(self, task: Task):
         arrival = self.env.now
         node_id = self.scheduler.choose_node(task, self.nodes, self.env.now)
@@ -99,6 +85,8 @@ class DataCenter:
                 yield self.env.timeout(remaining)
                 remaining = 0.0
             except simpy.Interrupt as interrupt:
+                # The rebalancer interrupts with a target node id. The task
+                # holds capacity nowhere while it moves.
                 remaining -= self.env.now - segment_start
                 target_id = interrupt.cause
 
@@ -140,7 +128,6 @@ class DataCenter:
                 yield self.env.timeout(delay)
             self.env.process(self._run_task(task))
 
-    # --- entry point -----------------------------------------------------------
     def run(self, tasks: list[Task], duration_min: float,
             sample_interval_min: float = 30.0, rebalance_interval_min: float = 5.0):
         self.env.process(self._arrivals(tasks))

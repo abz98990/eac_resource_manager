@@ -1,7 +1,4 @@
-"""
-Visualization helpers. Every function saves a PNG into figures/ and returns
-the path, so each stage of development leaves behind visual evidence.
-"""
+"""Chart generation. Every function saves a PNG into figures/ and returns its path."""
 
 from __future__ import annotations
 
@@ -19,6 +16,8 @@ sns.set_theme(style="whitegrid", palette="muted")
 FIGURES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
+_PALETTE = ["#7f7f7f", "#2ca02c", "#1f77b4", "#d62728"]
+
 
 def _save(filename: str) -> str:
     path = os.path.join(FIGURES_DIR, filename)
@@ -29,7 +28,6 @@ def _save(filename: str) -> str:
 
 
 def plot_power_curve() -> str:
-    """Non-linear power model: idle baseline -> linear growth -> redline penalty."""
     load = np.linspace(0, 100, 500)
     power = power_model.power_draw_watts(load)
 
@@ -48,7 +46,6 @@ def plot_power_curve() -> str:
 
 
 def plot_workload_arrivals(tasks, duration_min: float, bin_minutes: float = 60.0) -> str:
-    """Histogram of task arrivals over time, showing the diurnal pattern + spikes."""
     arrivals = [t.arrival_time for t in tasks]
     n_bins = int(duration_min // bin_minutes)
 
@@ -61,23 +58,18 @@ def plot_workload_arrivals(tasks, duration_min: float, bin_minutes: float = 60.0
 
 
 def plot_utilization_heatmap(util_df: pd.DataFrame, title: str, filename: str) -> str:
-    """util_df: rows = node id, columns = time bucket, values = % utilization."""
+    """`util_df`: rows are nodes, columns time buckets, values % utilisation."""
     plt.figure(figsize=(12, 6))
     ax = sns.heatmap(util_df, cmap="YlOrRd", vmin=0, vmax=100, linewidths=0.4,
-                      cbar_kws={"label": "CPU Utilization (%)"})
+                     cbar_kws={"label": "CPU Utilization (%)"})
     ax.set_title(title)
     ax.set_xlabel("Time Bucket")
     ax.set_ylabel("Server Node")
     return _save(filename)
 
 
-_PALETTE = ["#7f7f7f", "#2ca02c", "#1f77b4", "#d62728"]
-
-
 def plot_scheduler_comparison(summary: pd.DataFrame, short_labels: list[str] | None = None) -> str:
-    """summary: index = scheduler name, columns include 'total_energy_kwh',
-    'mean_completion_latency_min', and 'sla_breach_rate'. Works for any number
-    of schedulers (rows)."""
+    """`summary`: one row per scheduler, indexed by name."""
     labels = short_labels or [s.replace(" (", "\n(") for s in summary.index]
     colors = _PALETTE[: len(summary)]
     x = range(len(summary))
@@ -109,7 +101,7 @@ def plot_scheduler_comparison(summary: pd.DataFrame, short_labels: list[str] | N
 
 
 def plot_active_nodes(active_by_scheduler: dict, filename: str = "active_nodes.png") -> str:
-    """active_by_scheduler: {scheduler_name: DataFrame(time_min, active_nodes)}."""
+    """`active_by_scheduler`: {scheduler name: DataFrame(time_min, active_nodes)}."""
     plt.figure(figsize=(10, 5))
     for i, (name, df) in enumerate(active_by_scheduler.items()):
         plt.plot(df["time_min"], df["active_nodes"], label=name,
@@ -122,8 +114,7 @@ def plot_active_nodes(active_by_scheduler: dict, filename: str = "active_nodes.p
 
 
 def plot_sensitivity(df: pd.DataFrame, x_col: str, x_label: str, title: str, filename: str) -> str:
-    """df: long-format sweep results with columns [x_col, 'scheduler',
-    'total_energy_kwh', 'mean_completion_latency_min', 'sla_breach_rate']."""
+    """`df`: long-format sweep results, one row per (x value, scheduler)."""
     schedulers = df["scheduler"].unique()
     palette = {s: _PALETTE[i % len(_PALETTE)] for i, s in enumerate(schedulers)}
     metrics_cols = [
@@ -149,11 +140,3 @@ def plot_sensitivity(df: pd.DataFrame, x_col: str, x_label: str, title: str, fil
     plt.savefig(path, dpi=200)
     plt.close()
     return path
-
-
-if __name__ == "__main__":
-    from . import workload
-
-    print("Saved:", plot_power_curve())
-    tasks = workload.generate_tasks(duration_min=1440, spike_windows=[(600, 660, 6.0), (900, 930, 8.0)])
-    print("Saved:", plot_workload_arrivals(tasks, duration_min=1440))

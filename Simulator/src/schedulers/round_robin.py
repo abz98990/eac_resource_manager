@@ -1,10 +1,4 @@
-"""
-The "dumb" static baseline scheduler (IPR S4.1, Development Plan step 1).
-
-Cycles through nodes in fixed order with no awareness of current load. This
-is deliberate: it is the control group the Green Heuristic Constraint Engine
-is measured against. It never rebalances/migrates running tasks.
-"""
+"""Static baseline: fixed rotation, no load awareness, no migration."""
 
 from __future__ import annotations
 

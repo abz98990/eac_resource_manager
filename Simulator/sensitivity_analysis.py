@@ -1,10 +1,4 @@
-"""
-Sensitivity analysis: does the Green Heuristic's advantage over Round-Robin
-(lower SLA breach rate, marginal energy edge) hold across cluster sizes and
-workload intensities, or was the single scenario in run_simulation.py a
-lucky/unlucky point? IPR S5's evaluation as originally scoped is a single
-snapshot; this sweeps two axes to check how broadly the Task 3 result holds.
-"""
+"""Sweeps cluster size and workload intensity to see how far the results hold."""
 
 from __future__ import annotations
 
@@ -34,7 +28,7 @@ def run_once(num_nodes: int, tasks, scheduler_cls) -> dict:
 
 
 def node_count_sweep(node_counts: list[int]) -> pd.DataFrame:
-    """Fixed workload, varying cluster size: from oversubscribed to generously provisioned."""
+    """Fixed workload, varying cluster size: oversubscribed through to roomy."""
     tasks = workload.generate_tasks(duration_min=DURATION_MIN, spike_windows=BASE_SPIKE_WINDOWS)
     rows = []
     for n in node_counts:
@@ -50,7 +44,7 @@ def node_count_sweep(node_counts: list[int]) -> pd.DataFrame:
 
 
 def intensity_sweep(multipliers: list[float], num_nodes: int = 20) -> pd.DataFrame:
-    """Fixed 20-node cluster, scaling arrival rates (base/peak/spike) together."""
+    """Fixed cluster, scaling the base, peak and spike arrival rates together."""
     rows = []
     for m in multipliers:
         spike_windows = [(s, e, r * m) for s, e, r in BASE_SPIKE_WINDOWS]
@@ -73,7 +67,7 @@ def intensity_sweep(multipliers: list[float], num_nodes: int = 20) -> pd.DataFra
 
 
 def main():
-    print("=== Node-count sweep (fixed workload, 3198 tasks) ===")
+    print("=== Node-count sweep (fixed workload) ===")
     node_df = node_count_sweep([14, 17, 20, 25, 30])
     metrics.export_csv(node_df, "sensitivity_node_count.csv")
     print("Saved:", visualize.plot_sensitivity(

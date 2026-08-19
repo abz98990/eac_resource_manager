@@ -1,14 +1,4 @@
-"""
-Entry point: runs an identical generated workload through three schedulers
-(Round-Robin baseline, Green Heuristic Rule-Based Constraint Engine, and the
-Consolidating Green Heuristic that adds power-down/wake-up), extracts
-metrics to CSV, and saves comparison figures.
-
-IPR S4.1 "Comparative Analysis" step: "Using identical workload arrays for
-both 'dumb' workloads and intelligent workloads, we will be able to see
-exactly what differences in the total energy consumed (kWh) and the amount
-of time to complete a task are presented."
-"""
+"""Runs one workload through all three schedulers and writes the comparison."""
 
 from __future__ import annotations
 
@@ -22,9 +12,9 @@ from src.schedulers.green_heuristic import GreenHeuristicScheduler
 from src.schedulers.round_robin import RoundRobinScheduler
 
 NUM_NODES = 20
-DURATION_MIN = 1440.0  # 1 simulated day
+DURATION_MIN = 1440.0
 SAMPLE_INTERVAL_MIN = 15.0
-SPIKE_WINDOWS = [(600, 660, 6.0), (900, 930, 8.0)]  # (start_min, end_min, extra tasks/min)
+SPIKE_WINDOWS = [(600, 660, 6.0), (900, 930, 8.0)]
 
 SCHEDULERS = (
     (RoundRobinScheduler, "baseline", "Baseline\n(Round-Robin)"),
@@ -58,6 +48,8 @@ def run_scenario(scheduler_factory, name_slug: str, tasks):
 
 def main():
     visualize.plot_power_curve()
+    # One trace, reused by every scheduler, so the only thing that varies is
+    # the placement policy.
     tasks = workload.generate_tasks(duration_min=DURATION_MIN, spike_windows=SPIKE_WINDOWS)
     visualize.plot_workload_arrivals(tasks, duration_min=DURATION_MIN)
     print(f"Generated {len(tasks)} tasks over {DURATION_MIN:.0f} simulated minutes across {NUM_NODES} nodes.\n")

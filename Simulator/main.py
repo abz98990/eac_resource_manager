@@ -1,17 +1,11 @@
-"""
-Single entry point for the Energy-Aware Cloud Resource Infrastructure Simulator.
+"""Entry point for the Energy-Aware Cloud Resource Infrastructure Simulator.
 
-    python main.py demo         Narrated walkthrough: power model -> workload ->
-                                 full 3-scheduler comparison. Best option when
-                                 presenting the simulator live to someone else.
-    python main.py run          Full 3-scheduler comparison only (same as `demo`
-                                 minus the narration) - the "official" result set.
-    python main.py sensitivity  Node-count / workload-intensity sensitivity sweeps.
-    python main.py components   Quick standalone look at just the power model and
-                                 workload generator, without running a full simulation.
+    python main.py demo         narrated walkthrough, for presenting live
+    python main.py run          the three-scheduler comparison
+    python main.py sensitivity  cluster-size and workload-intensity sweeps
+    python main.py components   power model and workload generator only
 
-All CSVs land in data/, all figures land in figures/. See README.md for setup
-and a suggested live-demo script.
+CSVs land in data/, figures in figures/. See README.md.
 """
 
 from __future__ import annotations

@@ -1,8 +1,4 @@
-"""
-Pandas-based data extraction (IPR S4.1 Task 4 / S3.2): turns raw DataCenter
-run output into structured DataFrames, CSV exports, and summary statistics
-comparable across schedulers.
-"""
+"""Turns raw simulation output into DataFrames, summary stats and CSV files."""
 
 from __future__ import annotations
 
@@ -43,17 +39,14 @@ def utilization_samples_to_df(samples) -> pd.DataFrame:
 
 
 def utilization_heatmap_matrix(util_df: pd.DataFrame) -> pd.DataFrame:
-    """Pivot to node x time-bucket matrix of % utilization, for heatmap plotting."""
     return util_df.pivot_table(index="node_id", columns="time_min", values="used_pct")
 
 
 def active_nodes_over_time(util_df: pd.DataFrame) -> pd.DataFrame:
-    """Count of powered-on nodes at each sampled timestep."""
     return util_df.groupby("time_min")["powered_on"].sum().reset_index(name="active_nodes")
 
 
 def sample_power_watts(util_df: pd.DataFrame) -> "pd.Series":
-    """Per-sample power draw: the ON-state model where powered on, 0 where off."""
     on_power = power_model.power_draw_watts(util_df["used_pct"].to_numpy())
     return pd.Series(
         np.where(util_df["powered_on"].to_numpy(), on_power, power_model.POWERED_OFF_W),
@@ -62,7 +55,6 @@ def sample_power_watts(util_df: pd.DataFrame) -> "pd.Series":
 
 
 def total_energy_kwh(util_df: pd.DataFrame, sample_interval_min: float) -> float:
-    """Riemann-sum the power model over every (node, timestep) utilization sample."""
     power_w = sample_power_watts(util_df)
     energy = power_model.energy_kwh(power_w.to_numpy(), timestep_hours=sample_interval_min / 60.0)
     return float(energy.sum())
@@ -70,6 +62,8 @@ def total_energy_kwh(util_df: pd.DataFrame, sample_interval_min: float) -> float
 
 def summarize(task_df: pd.DataFrame, util_df: pd.DataFrame, sample_interval_min: float,
               scheduler_name: str) -> dict:
+    # Tasks still running when the window closed have no completion time, so
+    # they are excluded from the latency and SLA figures.
     completed = task_df[task_df["end_time_min"] > 0]
     return {
         "scheduler": scheduler_name,
